@@ -1,3 +1,64 @@
+diff --git a/package-lock.json b/package-lock.json
+index 158a611..c39a661 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -16,6 +16,7 @@
+         "@tanstack/react-query": "5.24.1",
+         "@tanstack/react-query-devtools": "5.24.1",
+         "@tanstack/react-virtual": "3.2.0",
++        "@tauri-apps/api": "2.9.1",
+         "@vanilla-extract/css": "1.9.3",
+         "@vanilla-extract/recipes": "0.3.0",
+         "@vanilla-extract/vite-plugin": "3.7.1",
+@@ -4501,6 +4502,16 @@
+         "url": "https://github.com/sponsors/tannerlinsley"
+       }
+     },
++    "node_modules/@tauri-apps/api": {
++      "version": "2.9.1",
++      "resolved": "https://registry.npmjs.org/@tauri-apps/api/-/api-2.9.1.tgz",
++      "integrity": "sha512-IGlhP6EivjXHepbBic618GOmiWe4URJiIeZFlB7x3czM0yDHHYviH1Xvoiv4FefdkQtn6v7TuwWCRfOGdnVUGw==",
++      "license": "Apache-2.0 OR MIT",
++      "funding": {
++        "type": "opencollective",
++        "url": "https://opencollective.com/tauri"
++      }
++    },
+     "node_modules/@types/babel__core": {
+       "version": "7.20.5",
+       "resolved": "https://registry.npmjs.org/@types/babel__core/-/babel__core-7.20.5.tgz",
+diff --git a/package.json b/package.json
+index 7316dcc..88b96da 100644
+--- a/package.json
++++ b/package.json
+@@ -27,6 +27,7 @@
+     "@tanstack/react-query": "5.24.1",
+     "@tanstack/react-query-devtools": "5.24.1",
+     "@tanstack/react-virtual": "3.2.0",
++    "@tauri-apps/api": "2.9.1",
+     "@vanilla-extract/css": "1.9.3",
+     "@vanilla-extract/recipes": "0.3.0",
+     "@vanilla-extract/vite-plugin": "3.7.1",
+diff --git a/src/app/pages/App.tsx b/src/app/pages/App.tsx
+index 52ec7f2..e920a99 100644
+--- a/src/app/pages/App.tsx
++++ b/src/app/pages/App.tsx
+@@ -3,7 +3,6 @@ import { Provider as JotaiProvider } from 'jotai';
+ import { OverlayContainerProvider, PopOutContainerProvider, TooltipContainerProvider } from 'folds';
+ import { RouterProvider } from 'react-router-dom';
+ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+ 
+ import { ClientConfigLoader } from '../components/ClientConfigLoader';
+ import { ClientConfigProvider } from '../hooks/useClientConfig';
+@@ -39,7 +38,6 @@ function App() {
+                       <JotaiProvider>
+                         <RouterProvider router={createRouter(clientConfig, screenSize)} />
+                       </JotaiProvider>
+-                      <ReactQueryDevtools initialIsOpen={false} />
+                     </QueryClientProvider>
+                   </ClientConfigProvider>
+                 )}
 diff --git a/src/app/utils/matrix.ts b/src/app/utils/matrix.ts
 index 4c86c4e..feecc18 100644
 --- a/src/app/utils/matrix.ts
