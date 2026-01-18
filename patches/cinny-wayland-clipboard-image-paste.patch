@@ -1,0 +1,113 @@
+diff --git a/package-lock.json b/package-lock.json
+index 158a611..c39a661 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -16,6 +16,7 @@
+         "@tanstack/react-query": "5.24.1",
+         "@tanstack/react-query-devtools": "5.24.1",
+         "@tanstack/react-virtual": "3.2.0",
++        "@tauri-apps/api": "2.9.1",
+         "@vanilla-extract/css": "1.9.3",
+         "@vanilla-extract/recipes": "0.3.0",
+         "@vanilla-extract/vite-plugin": "3.7.1",
+@@ -4501,6 +4502,16 @@
+         "url": "https://github.com/sponsors/tannerlinsley"
+       }
+     },
++    "node_modules/@tauri-apps/api": {
++      "version": "2.9.1",
++      "resolved": "https://registry.npmjs.org/@tauri-apps/api/-/api-2.9.1.tgz",
++      "integrity": "sha512-IGlhP6EivjXHepbBic618GOmiWe4URJiIeZFlB7x3czM0yDHHYviH1Xvoiv4FefdkQtn6v7TuwWCRfOGdnVUGw==",
++      "license": "Apache-2.0 OR MIT",
++      "funding": {
++        "type": "opencollective",
++        "url": "https://opencollective.com/tauri"
++      }
++    },
+     "node_modules/@types/babel__core": {
+       "version": "7.20.5",
+       "resolved": "https://registry.npmjs.org/@types/babel__core/-/babel__core-7.20.5.tgz",
+diff --git a/package.json b/package.json
+index 7316dcc..88b96da 100644
+--- a/package.json
++++ b/package.json
+@@ -27,6 +27,7 @@
+     "@tanstack/react-query": "5.24.1",
+     "@tanstack/react-query-devtools": "5.24.1",
+     "@tanstack/react-virtual": "3.2.0",
++    "@tauri-apps/api": "2.9.1",
+     "@vanilla-extract/css": "1.9.3",
+     "@vanilla-extract/recipes": "0.3.0",
+     "@vanilla-extract/vite-plugin": "3.7.1",
+diff --git a/src/app/hooks/useFilePasteHandler.ts b/src/app/hooks/useFilePasteHandler.ts
+index 0f63b75..fe545ee 100644
+--- a/src/app/hooks/useFilePasteHandler.ts
++++ b/src/app/hooks/useFilePasteHandler.ts
+@@ -1,11 +1,66 @@
+ import { useCallback, ClipboardEventHandler } from 'react';
+ import { getDataTransferFiles } from '../utils/dom';
+ 
++// Check if running in Tauri - check for window.__TAURI__ or __TAURI_INTERNALS__
++const isTauri = (): boolean => {
++  return typeof window !== 'undefined' && 
++    ('__TAURI__' in window || '__TAURI_INTERNALS__' in window);
++};
++
++// Get clipboard image from Tauri backend
++const getTauriClipboardImage = async (): Promise<File | null> => {
++  if (!isTauri()) {
++    console.log('[Clipboard] Not in Tauri environment');
++    return null;
++  }
++  
++  try {
++    console.log('[Clipboard] Attempting to get image from Tauri...');
++    const { invoke } = await import('@tauri-apps/api/core');
++    console.log('[Clipboard] Got invoke function, calling get_clipboard_image...');
++    const result = await invoke<{ data: string; mime_type: string } | null>('get_clipboard_image');
++    console.log('[Clipboard] Result:', result ? `Got ${result.mime_type}` : 'No image');
++    
++    if (result && result.data) {
++      // Convert base64 to File
++      const byteString = atob(result.data);
++      const ab = new ArrayBuffer(byteString.length);
++      const ia = new Uint8Array(ab);
++      for (let i = 0; i < byteString.length; i++) {
++        ia[i] = byteString.charCodeAt(i);
++      }
++      const ext = result.mime_type.split('/')[1] || 'png';
++      const blob = new Blob([ab], { type: result.mime_type });
++      console.log('[Clipboard] Created file from clipboard image');
++      return new File([blob], `clipboard-image.${ext}`, { type: result.mime_type });
++    }
++  } catch (e) {
++    console.error('[Clipboard] Failed to get clipboard image from Tauri:', e);
++  }
++  return null;
++};
++
+ export const useFilePasteHandler = (onPaste: (file: File[]) => void): ClipboardEventHandler =>
+   useCallback(
+     (evt) => {
++      // First try standard clipboard API
+       const files = getDataTransferFiles(evt.clipboardData);
+-      if (files) onPaste(files);
++      if (files && files.length > 0) {
++        console.log('[Clipboard] Got files from standard API:', files.length);
++        onPaste(files);
++        return;
++      }
++      
++      console.log('[Clipboard] No files from standard API, trying Tauri...');
++      // If no files from standard API and we're in Tauri, try native clipboard
++      getTauriClipboardImage().then((tauriImage) => {
++        if (tauriImage) {
++          console.log('[Clipboard] Got image from Tauri, passing to handler');
++          onPaste([tauriImage]);
++        } else {
++          console.log('[Clipboard] No image from Tauri either');
++        }
++      });
+     },
+     [onPaste]
+   );
